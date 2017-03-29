@@ -48,6 +48,9 @@
 
 
 int main() {
+    
+    // initialize speed
+    //
 
     __builtin_disable_interrupts();
 
@@ -64,7 +67,10 @@ int main() {
     DDPCONbits.JTAGEN = 0;
 
     // do your TRIS and LAT commands here
-
+    TRISBbits.TRISB4 = 1;
+    TRISAbits.TRISA4 = 0;
+    LATAbits.LATA4 = 1;
+    
     __builtin_enable_interrupts();
 
     while(1) {
