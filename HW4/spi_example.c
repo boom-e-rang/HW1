@@ -1,50 +1,61 @@
+
 #include "NU32.h"       // constants, funcs for startup and UART
-// Demonstrates spi by accessing external ram
-// PIC is the master, ram is the slave
-// Uses microchip 23K256 ram chip (see the data sheet for protocol details)
+
+// Demonstrates SPI
+// PIC is the master, DAC is the slave
+// Uses microchip MCP4902 chip 
+// pin 1 (VDD) -> 5V (should this be 3.3V?)
+// pin 2 (NC)
+// pin 3 (CS) -> pin 17 B8
+// pin 4 (SCK) -> pin 25 B14
+// pin 5 (SDI) -> 
+// pin 6 (NC) -> 
+// pin 7 (NC) -> 
+// pin 8 (VOUTA) -> 
+// pin 9 (VREFA) -> 
+// pin 10 (VSS) -> 
+// pin 11 (VREFB) -> 
+// pin 12 (VOUTB) -> 
+// pin 13 (SHDN) -> 
+// pin 14 (LDAC) -> 
+
 // SDO4 -> SI (pin F5 -> pin 5)
 // SDI4 -> SO (pin F4 -> pin 2)
-// SCK4 -> SCK (pin B14 -> pin 6)
-// SS4 -> CS (pin B8 -> pin 1)
-// Additional SRAM connections
-// Vss (Pin 4) -> ground
-// Vcc (Pin 8) -> 3.3 V
-// Hold (pin 7) -> 3.3 V (we don't use the hold function)
-// 
-// Only uses the SRAM's sequential mode
-//
+
+
+
 #define CS LATBbits.LATB8       // chip select pin
 
 // send a byte via spi and return the response
 unsigned char spi_io(unsigned char o) {
-  SPI4BUF = o;
-  while(!SPI4STATbits.SPIRBF) { // wait to receive the byte
+  SPI2BUF = o;
+  while(!SPI2STATbits.SPIRBF) { // wait to receive the byte
     ;
   }
-  return SPI4BUF;
+  return SPI2BUF;
 }
 
-// initialize spi4 and the ram module
-void ram_init() {
+// initialize SPI2
+void DAC_init() {
   // set up the chip select pin as an output
-  // the chip select pin is used by the sram to indicate
+  // the chip select pin is used by the slave to indicate
   // when a command is beginning (clear CS to low) and when it
   // is ending (set CS high)
   TRISBbits.TRISB8 = 0;
   CS = 1;
 
-  // Master - SPI4, pins are: SDI4(F4), SDO4(F5), SCK4(F13).  
+  // Master - SPI2, pins are: SDI4(F4), SDO4(F5), SCK4(F13).  
   // we manually control SS4 as a digital output (F12)
-  // since the pic is just starting, we know that spi is off. We rely on defaults here
+  // since the pic is just starting, we know that SPI is off. We rely on defaults here
  
-  // setup spi4
-  SPI4CON = 0;              // turn off the spi module and reset it
-  SPI4BUF;                  // clear the rx buffer by reading from it
-  SPI4BRG = 0x3;            // baud rate to 10 MHz [SPI4BRG = (80000000/(2*desired))-1]
-  SPI4STATbits.SPIROV = 0;  // clear the overflow bit
-  SPI4CONbits.CKE = 1;      // data changes when clock goes from hi to lo (since CKP is 0)
-  SPI4CONbits.MSTEN = 1;    // master operation
-  SPI4CONbits.ON = 1;       // turn on spi 4
+  // setup SPI2
+  SPI2CON = 0;              // turn off the spi module and reset it
+  SPI2BUF;                  // clear the rx buffer by reading from it
+  SPI2BRG = 0x3;            // baud rate to 10 MHz [SPI2BRG = (80000000/(2*desired))-1]
+  SPI2STATbits.SPIROV = 0;  // clear the overflow bit
+  SPI2CONbits.CKE = 1;      // data changes when clock goes from hi to lo (since CKP is 0)
+  SPI2CONbits.MSTEN = 1;    // master operation
+  SPI2CONbits.ON = 1;       // turn on SPI2
 
                             // send a ram set status command.
   CS = 0;                   // enable the ram
