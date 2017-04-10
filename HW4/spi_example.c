@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include "NU32.h" 
 
 // Demonstrates SPI
 // PIC is the master, DAC is the slave
@@ -23,31 +24,39 @@
 #define CS LATBbits.LATB8       // chip select pin
 #define NUMSAMPS 100            // number of points in waveform
 #define PI 3.14159265
+#define DELAY 40
 
 unsigned char spi_io(unsigned char o);
 void initSPI1(void);
 void setVoltage(char channel, char voltage);
-void makeWaveform(void);
+void makeSinWave(void);
+void makeTriangleWave(void);
 
 
 int main(void) {
   
   initSPI1(); 
-  RPB15Rbits.RPB15R = 0b0101;
-
-  sprintf(buf, "Status 0x%x\r\n",status);
-
-  sprintf(buf,"Writing \"%s\" to ram at address 0x%x\r\n", data, addr1);
-  
-                                                    // write the data to the ram
-  ram_write(addr1, data, strlen(data) + 1);         // +1, to send the '\0' character
-  ram_read(addr1, read, strlen(data) + 1);          // read the data back
-  sprintf(buf,"Read \"%s\" from ram at address 0x%x\r\n", read, addr1);
-
+  RPA4Rbits.RPA4R=0b0011;
+  i=0;
+          
   while(1) {
-    ;
+    
+    _CP0_SET_COUNT(0);
+    setVoltage(0, SinWave[i]);
+    setVoltage(1, TriangleWave[i]);
+    
+    while(_CP0_GET_COUNT()<DELAY){
+        ;
+    }
+    
+    if (i==100){
+        i=0;
+    } else {
+        i=i+1;
+    }
+  
   }
-  return 0;
+  return (0);
 }
 
 
@@ -56,7 +65,6 @@ unsigned char spi_io(unsigned char o) {
   while(!SPI1STATbits.SPIRBF) { // wait to receive the byte
     ;
   }
-  return SPI1BUF;
 }
 
 // initialize SPI1
@@ -79,51 +87,37 @@ void initSPI1(void) {
   SPI1STATbits.SPIROV = 0;  // clear the overflow bit
   SPI1CONbits.CKE = 1;      // data changes when clock goes from hi to lo (since CKP is 0)
   SPI1CONbits.MSTEN = 1;    // master operation
-  SPI1CONbits.ON = 1;       // turn on SPI2
-
-                            // send a ram set status command.
-  CS = 0;                   // enable the ram
-  spi_io(0x01);             // ram write status
-  spi_io(0x41);             // sequential mode (mode = 0b01), hold disabled (hold = 0)
-  CS = 1;                   // finish the command
+  SPI1CONbits.ON = 1;       // turn on SPI1
 }
 
 
 void setVoltage(char channel, char voltage) {
+    
+    unsigned char something1, something2;
+    
     CS = 0;
-    
-    
+    if (channel==0) {
+        something1 = (voltage >> 4) + 0b01110000;
+    } else if (channel==1) {
+        something1 = (voltage >> 4) + 0b11110000;
+    }
+    something2 = (voltage << 4);
+   
+    spi_io(something1);
+    spi_io(something2);
     CS = 1;   
 }
-// write len bytes to the ram, starting at the address addr
-void ram_write(unsigned short addr, const char data[], int len) {
-  int i = 0;
-                        // enable the ram by lowering the chip select line
-  spi_io(0x2);                   // sequential write operation
-  spi_io((addr & 0xFF00) >> 8 ); // most significant byte of address
-  spi_io(addr & 0x00FF);         // the least significant address byte
-  for(i = 0; i < len; ++i) {
-    spi_io(data[i]);
-  }
-                       // raise the chip select line, ending communication
-}
 
-// read len bytes from ram, starting at the address addr
-void ram_read(unsigned short addr, char data[], int len) {
-  int i = 0;
-  CS = 0;
-  spi_io(0x3);                   // ram read operation
-  spi_io((addr & 0xFF00) >> 8);  // most significant address byte
-  spi_io(addr & 0x00FF);         // least significant address byte
-  for(i = 0; i < len; ++i) {
-    data[i] = spi_io(0);         // read in the data
-  }
-  CS = 1;
-}
-
-void makeWaveform(void) {
+void makeSinWave(void) {
   int i = 0;
   for (i = 0; i < NUMSAMPS; ++i) {
-    Waveform[i] = sin(i/NUMSAMPS*2*PI);
+    SinWave[i] = sin(i/NUMSAMPS*2*PI)*255;
+  }
+}
+
+void makeTriangleWave(void) {
+  int i = 0;
+  for (i = 0; i < NUMSAMPS; ++i) {
+    TriangleWave[i] = (i/NUMSAMPS)*255;
   }
 }
