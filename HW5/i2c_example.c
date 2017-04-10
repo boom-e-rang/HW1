@@ -1,3 +1,4 @@
+
 #include "i2c_slave.h"
 #include "i2c_master_noint.h"
 // Demonstrate I2C by having the I2C1 talk to I2C5 on the same PIC32 (PIC32MX795F512H)
@@ -18,22 +19,22 @@ int main() {
   unsigned char master_read1  = 0x00;       // second received byte
 
   // some initialization function to set the right speed setting
-  Startup(); 
+  Startup();
   __builtin_disable_interrupts();
-  i2c_slave_setup(SLAVE_ADDR);              // init I2C5, which we use as a slave 
+  i2c_slave_setup(SLAVE_ADDR);              // init I2C5, which we use as a slave
                                             //  (comment out if slave is on another pic)
   i2c_master_setup();                       // init I2C2, which we use as a master
   __builtin_enable_interrupts();
-  
+
   while(1) {
     WriteUART3("Master: Press Enter to begin transmission.\r\n");
     ReadUART3(buf,2);
     i2c_master_start();                     // Begin the start sequence
-    i2c_master_send(SLAVE_ADDR << 1);       // send the slave address, left shifted by 1, 
+    i2c_master_send(SLAVE_ADDR << 1);       // send the slave address, left shifted by 1,
                                             // which clears bit 0, indicating a write
-    i2c_master_send(master_write0);         // send a byte to the slave       
+    i2c_master_send(master_write0);         // send a byte to the slave
     i2c_master_send(master_write1);         // send another byte to the slave
-    i2c_master_restart();                   // send a RESTART so we can begin reading 
+    i2c_master_restart();                   // send a RESTART so we can begin reading
     i2c_master_send((SLAVE_ADDR << 1) | 1); // send slave address, left shifted by 1,
                                             // and then a 1 in lsb, indicating read
     master_read0 = i2c_master_recv();       // receive a byte from the bus
