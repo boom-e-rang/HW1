@@ -1,59 +1,48 @@
 
+#include <stdio.h>
+#include <math.h>
+
 // Demonstrates SPI
 // PIC is the master, DAC is the slave
 // Uses microchip MCP4902 chip 
-// pin 1 (VDD) -> 5V (should this be 3.3V?)
-// pin 2 (NC)
+// pin 1 (VDD) -> 3.3V
+// pin 2 (NC) -> --
 // pin 3 (CS) -> pin 17 B8
 // pin 4 (SCK) -> pin 25 B14
-// pin 5 (SDI) -> 
-// pin 6 (NC) -> 
-// pin 7 (NC) -> 
-// pin 8 (VOUTA) -> 
-// pin 9 (VREFA) -> 
-// pin 10 (VSS) -> 
-// pin 11 (VREFB) -> 
-// pin 12 (VOUTB) -> 
-// pin 13 (SHDN) -> 
-// pin 14 (LDAC) -> 
-
-// SDO4 -> SI (pin F5 -> pin 5)
-// SDI4 -> SO (pin F4 -> pin 2)
+// pin 5 (SDI) -> pin 12 RA4
+// pin 6 (NC) -> --
+// pin 7 (NC) -> --
+// pin 8 (VOUTA) -> Ch1 of NScope
+// pin 9 (VREFA) -> GND
+// pin 10 (VSS) -> GND
+// pin 11 (VREFB) -> GND
+// pin 12 (VOUTB) -> Ch2 of NScope
+// pin 13 (SHDN) -> --
+// pin 14 (LDAC) -> --
 
 #define CS LATBbits.LATB8       // chip select pin
+#define NUMSAMPS 100            // number of points in waveform
+#define PI 3.14159265
 
 unsigned char spi_io(unsigned char o);
 void initSPI1(void);
-void ram_write(unsigned short addr, const char data[], int len);
-void ram_read(unsigned short addr, char data[], int len);
+void setVoltage(char channel, char voltage);
 void makeWaveform(void);
 
 
 int main(void) {
-  unsigned short addr1 = 0x1234;                  // the address for writing the ram
-  char data[] = "Help, I'm stuck in the RAM!";    // the test message
-  char read[] = "***************************";    // buffer for reading from ram
-  char buf[100];                                  // buffer for comm. with the user
-  unsigned char status;                           // used to verify we set the status 
   
   initSPI1(); 
-
-  // check the ram status
-  CS = 0;
-  spi_io(0x5);                                      // ram read status command
-  status = spi_io(0);                               // the actual status
-  CS = 1;
+  RPB15Rbits.RPB15R = 0b0101;
 
   sprintf(buf, "Status 0x%x\r\n",status);
-  NU32_WriteUART3(buf);
 
   sprintf(buf,"Writing \"%s\" to ram at address 0x%x\r\n", data, addr1);
-  NU32_WriteUART3(buf);
+  
                                                     // write the data to the ram
   ram_write(addr1, data, strlen(data) + 1);         // +1, to send the '\0' character
   ram_read(addr1, read, strlen(data) + 1);          // read the data back
   sprintf(buf,"Read \"%s\" from ram at address 0x%x\r\n", read, addr1);
-  NU32_WriteUART3(buf);
 
   while(1) {
     ;
@@ -99,17 +88,24 @@ void initSPI1(void) {
   CS = 1;                   // finish the command
 }
 
+
+void setVoltage(char channel, char voltage) {
+    CS = 0;
+    
+    
+    CS = 1;   
+}
 // write len bytes to the ram, starting at the address addr
 void ram_write(unsigned short addr, const char data[], int len) {
   int i = 0;
-  CS = 0;                        // enable the ram by lowering the chip select line
+                        // enable the ram by lowering the chip select line
   spi_io(0x2);                   // sequential write operation
   spi_io((addr & 0xFF00) >> 8 ); // most significant byte of address
   spi_io(addr & 0x00FF);         // the least significant address byte
   for(i = 0; i < len; ++i) {
     spi_io(data[i]);
   }
-  CS = 1;                        // raise the chip select line, ending communication
+                       // raise the chip select line, ending communication
 }
 
 // read len bytes from ram, starting at the address addr
@@ -126,12 +122,8 @@ void ram_read(unsigned short addr, char data[], int len) {
 }
 
 void makeWaveform(void) {
-  int i = 0, center = 500, A = 300;     // square wave, fill in center value and amplitude
+  int i = 0;
   for (i = 0; i < NUMSAMPS; ++i) {
-    if (i < NUMSAMPS/2) {
-      Waveform[i] = center + A;
-    } else {
-      Waveform[i] = center - A;
-    }
+    Waveform[i] = sin(i/NUMSAMPS*2*PI);
   }
 }
