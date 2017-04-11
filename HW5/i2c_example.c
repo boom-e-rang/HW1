@@ -1,5 +1,4 @@
 
-#include "i2c_slave.h"
 #include "i2c_master_noint.h"
 // Demonstrate I2C by having the I2C1 talk to I2C5 on the same PIC32 (PIC32MX795F512H)
 // Master will use SDA1 (D9) and SCL1 (D10).  Connect these through resistors to
@@ -27,10 +26,9 @@ int main() {
   __builtin_enable_interrupts();
 
   while(1) {
-    WriteUART3("Master: Press Enter to begin transmission.\r\n");
-    ReadUART3(buf,2);
+
     i2c_master_start();                     // Begin the start sequence
-    i2c_master_send(SLAVE_ADDR << 1);       // send the slave address, left shifted by 1,
+    i2c_master_send((SLAVE_ADDR << 1) | 0); // send the slave address, left shifted by 1,
                                             // which clears bit 0, indicating a write
     i2c_master_send(master_write0);         // send a byte to the slave
     i2c_master_send(master_write1);         // send another byte to the slave
@@ -43,10 +41,6 @@ int main() {
     i2c_master_ack(1);                      // send NACK (1):  master needs no more bytes
     i2c_master_stop();                      // send STOP:  end transmission, give up bus
 
-    sprintf(buf,"Master Wrote: 0x%x 0x%x\r\n", master_write0, master_write1);
-    WriteUART3(buf);
-    sprintf(buf,"Master Read: 0x%x 0x%x\r\n", master_read0, master_read1);
-    WriteUART3(buf);
     ++master_write0;                        // change the data the master sends
     ++master_write1;
   }
