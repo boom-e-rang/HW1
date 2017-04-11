@@ -5,10 +5,10 @@
 // I2C pins need pull-up resistors, 2k-10k
 
 void i2c_master_setup(void) {
-  I2C1BRG = some number for 100kHz; // I2CBRG = [1/(2*Fsck) - PGD]*PBCLK - 2 
+  I2C1BRG = 0xE9;                   // I2CBRG = [1/(2*Fsck) - PGD]*PBCLK - 2 = 233
                                     // look up PGD for your PIC32 -> typical value is 104ns (52-312ns possible)
                                     // desired frequency = 100kHz
-                                    // PBCLK = 1/8 * SYSCLK
+                                    // PBCLK = 48M
   I2C1CONbits.ON = 1;               // turn on the I2C1 module
 }
 
