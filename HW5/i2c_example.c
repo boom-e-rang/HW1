@@ -1,12 +1,29 @@
 
 #include "i2c_master_noint.h"
-// Demonstrate I2C by having the I2C1 talk to I2C5 on the same PIC32 (PIC32MX795F512H)
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <xc.h>  
+// Demonstrate I2C by having the I2C1 talk to a chip
 // Master will use SDA1 (D9) and SCL1 (D10).  Connect these through resistors to
 // Vcc (3.3 V) (2.4k resistors recommended, but around that should be good enough)
 // Slave will use SDA5 (F4) and SCL5 (F5)
 // SDA5 -> SDA1
 // SCL5 -> SCL1
 // Two bytes will be written to the slave and then read back to the slave.
+
+// Wiring of the chip
+// SCL - SCL2 + pull-up resistor
+// SDA - SDA2 + pull-up resistor
+// A2, A1, A0 - GND
+// RESET - 3.3V
+
+// VSS - GND
+// VDD - capacitor, VDD
+
+
+
+
 #define SLAVE_ADDR 0x32
 
 // DEVCFG0
@@ -45,6 +62,7 @@
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
 int main() {
+    
   // some initialization function to set the right speed setting
   char buf[100] = {};                       // buffer for sending messages to the user
   unsigned char master_write0 = 0xCD;       // first byte that master writes
@@ -54,6 +72,7 @@ int main() {
 
   // some initialization function to set the right speed setting
   Startup();
+  
   __builtin_disable_interrupts();
   
       // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
@@ -73,11 +92,11 @@ int main() {
     TRISAbits.TRISA4 = 0; // set LED to an output pin
     LATAbits.LATA4 = 1; // set LED on
     
-    
     i2c_master_setup();                       // init I2C2, which we use as a master
     
   __builtin_enable_interrupts();
 
+  
   while(1) {
 
     i2c_master_start();                     // Begin the start sequence
