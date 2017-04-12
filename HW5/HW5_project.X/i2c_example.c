@@ -5,26 +5,28 @@
 
 #include <xc.h>  
 // Demonstrate I2C by having the I2C1 talk to a chip
-// Master will use SDA1 (D9) and SCL1 (D10).  Connect these through resistors to
+// Master will use SDA2 (pin6, RB2) and SCL2 (pin7, RB3).  Connect these through resistors to
 // Vcc (3.3 V) (2.4k resistors recommended, but around that should be good enough)
-// Slave will use SDA5 (F4) and SCL5 (F5)
-// SDA5 -> SDA1
-// SCL5 -> SCL1
+
 // Two bytes will be written to the slave and then read back to the slave.
 
 // Wiring of the chip
-// SCL - SCL2 + pull-up resistor
-// SDA - SDA2 + pull-up resistor
-// A2, A1, A0 - GND
-// RESET - 3.3V
-
+// SCL -> SCL2 + pull-up resistor
+// SDA -> SDA2 + pull-up resistor
+// A2 -> GND
+// A1 -> GND 
+// A0 -> GND
+// RESET -> 3.3V
+// ...
 // VSS - GND
+
 // VDD - capacitor, VDD
+// GP7 -> push button
+// ...
+// GP0 -> LED
 
 
-
-
-#define SLAVE_ADDR 0x32
+#define SLAVE_ADDR 0x20
 
 // DEVCFG0
 #pragma config DEBUG = 11 // no debugging
@@ -61,17 +63,12 @@
 #pragma config FUSBIDIO = 1 // USB pins controlled by USB module
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
+
 int main() {
     
   // some initialization function to set the right speed setting
   char buf[100] = {};                       // buffer for sending messages to the user
-  unsigned char master_write0 = 0xCD;       // first byte that master writes
-  unsigned char master_write1 = 0x91;       // second byte that master writes
-  unsigned char master_read0  = 0x00;       // first received byte
-  unsigned char master_read1  = 0x00;       // second received byte
-
-  // some initialization function to set the right speed setting
-  Startup();
+  
   
   __builtin_disable_interrupts();
   
@@ -86,35 +83,59 @@ int main() {
 
     // disable JTAG to get pins back
     DDPCONbits.JTAGEN = 0;
-
-    // do your TRIS and LAT commands here
-    TRISBbits.TRISB4 = 1; // set pushbutton to an input pin 
-    TRISAbits.TRISA4 = 0; // set LED to an output pin
-    LATAbits.LATA4 = 1; // set LED on
+    
+    // turn off analog
+    ANSELBbits.ANSB2 = 0;
+    ANSELBbits.ANSB3 = 0;
     
     i2c_master_setup();                       // init I2C2, which we use as a master
     
   __builtin_enable_interrupts();
-
   
-  while(1) {
-
+  
     i2c_master_start();                     // Begin the start sequence
     i2c_master_send((SLAVE_ADDR << 1) | 0); // send the slave address, left shifted by 1,
                                             // which clears bit 0, indicating a write
-    i2c_master_send(master_write0);         // send a byte to the slave
-    i2c_master_send(master_write1);         // send another byte to the slave
+    i2c_master_send(0x00);                  // IODIR register address is 0x00
+    i2c_master_send(0b11110000);            // set pins GP0-3 as outputs
+                                            // set pins GP4-7 as inputs
+    i2c_master_stop();
+    
+    i2c_master_start();                     
+    i2c_master_send((SLAVE_ADDR << 1) | 0); 
+    i2c_master_send(0x09);                  // GPIO register address is 0x00
+    i2c_master_send(0b00000000);            // set values to logic-low
+    i2c_master_stop();
+
+
+  while(1) {
+      
+    i2c_master_start();                     
+    i2c_master_send((SLAVE_ADDR << 1) | 0); 
+    i2c_master_send(0x09);                  // indicate register of pin to read (GPIO)
     i2c_master_restart();                   // send a RESTART so we can begin reading
     i2c_master_send((SLAVE_ADDR << 1) | 1); // send slave address, left shifted by 1,
                                             // and then a 1 in lsb, indicating read
-    master_read0 = i2c_master_recv();       // receive a byte from the bus
-    i2c_master_ack(0);                      // send ACK (0): master wants another byte!
-    master_read1 = i2c_master_recv();       // receive another byte from the bus
+    char r = i2c_master_recv();             // receive a byte from the bus
     i2c_master_ack(1);                      // send NACK (1):  master needs no more bytes
-    i2c_master_stop();                      // send STOP:  end transmission, give up bus
-
-    ++master_write0;                        // change the data the master sends
-    ++master_write1;
+    i2c_master_stop();
+    
+    char r_compare = 0b10000000;
+    if (r == r_compare) {
+        i2c_master_start();                     
+        i2c_master_send((SLAVE_ADDR << 1) | 0); 
+        i2c_master_send(0x09);                  // GPIO register address is 0x00
+        i2c_master_send(0b00000001);            // set values to logic-low
+        i2c_master_stop();
+    } else {
+        i2c_master_start();                     
+        i2c_master_send((SLAVE_ADDR << 1) | 0); 
+        i2c_master_send(0x09);                  // GPIO register address is 0x00
+        i2c_master_send(0b00000000);            // set values to logic-low
+        i2c_master_stop();
+    }
+    
   }
-  return 0;
+    
+  return (0);
 }
