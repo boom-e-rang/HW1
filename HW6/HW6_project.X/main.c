@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <xc.h>  
+#include "ILI9163C.h"
 
 #define SLAVE_ADDR 0x20
 
@@ -12,7 +13,6 @@
 #pragma config PWP = 111111111 // no write protect
 #pragma config BWP = 0 // no boot write protect
 #pragma config CP = 1 // no code protect
-
 // DEVCFG1
 #pragma config FNOSC = 011 // use primary oscillator with pll
 #pragma config FSOSCEN = 0 // turn off secondary oscillator
@@ -25,14 +25,12 @@
 #pragma config WINDIS = 1 // no wdt window
 #pragma config FWDTEN = 0 // wdt off by default
 #pragma config FWDTWINSZ = 11 // wdt window at 25%
-
 // DEVCFG2 - get the CPU clock to 48MHz
 #pragma config FPLLIDIV = 001 // (divide by 2) divide input clock to be in range 4-5MHz (divide by 2)
 #pragma config FPLLMUL = 111 // (multiply by 24) multiply clock after FPLLIDIV
 #pragma config FPLLODIV = 001 // (divide by 2) divide clock after FPLLMUL to get 48MHz
 #pragma config UPLLIDIV = 001 // divider for the 8MHz input clock, then multiply by 12 to get 48MHz for USB
 #pragma config UPLLEN = 0 // USB clock on
-
 // DEVCFG3
 #pragma config USERID = 0 // some 16bit userid, doesn't matter what
 #pragma config PMDL1WAY = 0 // allow multiple reconfigurations
@@ -40,13 +38,10 @@
 #pragma config FUSBIDIO = 1 // USB pins controlled by USB module
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
+void display_character(char array);
 
 int main() {
     
-  // some initialization function to set the right speed setting
-  char buf[100] = {};                       // buffer for sending messages to the user
-  
-  
   __builtin_disable_interrupts();
   
       // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
@@ -61,15 +56,32 @@ int main() {
     // disable JTAG to get pins back
     DDPCONbits.JTAGEN = 0;
     
+    SPI1_init();
+    LCD_init();
     
   __builtin_enable_interrupts();
   
+  LCD_clearScreen(GREEN);
   
-
-
+  char message[10];
+  sprintf(message, "h");
+  
+  int i=0;
+  while(message[i]){
+      display_character(message[i]);
+      i++;
+  }
+  
+  
   while(1) {
       ;
   }
     
   return (0);
+}
+
+
+void display_character(char array) {
+    
+    
 }
