@@ -38,7 +38,7 @@
 #pragma config FUSBIDIO = 1 // USB pins controlled by USB module
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
-void display_character(char array);
+void display_character(char character, unsigned short color, int x, int y);
 
 int main() {
     
@@ -64,14 +64,15 @@ int main() {
   LCD_clearScreen(GREEN);
   
   char message[10];
-  sprintf(message, "h");
+  sprintf(message, "H");
   
   int i=0;
+  char ASCII_value;
   while(message[i]){
-      display_character(message[i]);
+      ASCII_value = message[i] - 0x20;
+      display_character(ASCII_value, BLACK, 28+6*i, 32);
       i++;
   }
-  
   
   while(1) {
       ;
@@ -81,7 +82,20 @@ int main() {
 }
 
 
-void display_character(char array) {
+void display_character(char character, unsigned short color, int x, int y) {
     
-    
+    int ix, iy;
+    char binary, shifted;
+    for (ix=0; ix<=4; ix++) {
+        
+        binary = ASCII[character][ix+1];
+ 
+        for (iy=0; iy<=7; iy++) {
+            shifted = 0b1 << iy;
+            if (binary && shifted != 0) {
+                LCD_drawPixel(ix+x, iy+y, color);
+            }
+        }        
+        
+    }
 }
