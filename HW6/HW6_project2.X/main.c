@@ -38,7 +38,7 @@
 #pragma config FUSBIDIO = 1 // USB pins controlled by USB module
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
-void display_character(char character, unsigned short color, unsigned short background, int x, int y);
+void display_character(char character, unsigned short color, int x, int y);
 
 int main() {
     
@@ -61,34 +61,19 @@ int main() {
     
   __builtin_enable_interrupts();
   
-  LCD_clearScreen(YELLOW);
+  LCD_clearScreen(GREEN);
   
-  int n=0;
-  for (n=0; n<=100; n++) {
-      
-    _CP0_SET_COUNT(0);
-    char message[15];
-    sprintf(message, "Hello world %d!", n);
+  /*char message[10];
+  sprintf(message, "H");
   
-    int i=0;
-    char ASCII_value;
-    while(message[i]){
+  int i=0;
+  char ASCII_value;
+  while(message[i]){
       ASCII_value = message[i] - 0x20;
-      display_character(ASCII_value, BLACK, YELLOW, 28+6*i, 32);
+      display_character(ASCII_value, BLACK, 28+6*i, 32);
       i++;
-    }
-    
-    int ii=0;
-    for (ii=0; ii<=n; ii++) {
-       LCD_drawPixel(28+ii, 52, BLACK);
-    }
-    
-    while(_CP0_GET_COUNT()<2400000) {
-        ;
-    }
-    
-  }
-    
+  }*/
+  
   while(1) {
       ;
   }
@@ -97,19 +82,18 @@ int main() {
 }
 
 
-void display_character(char character, unsigned short color, unsigned short background, int x, int y) {
+void display_character(char character, unsigned short color, int x, int y) {
     
     int ix, iy;
-    char binary;
+    char binary, shifted;
     for (ix=0; ix<=4; ix++) {
         
-        binary = ASCII[character][ix];
+        binary = ASCII[character][ix+1];
  
         for (iy=0; iy<=7; iy++) {
-            if ((binary >> iy) & 1) {
+            shifted = 0b1 << iy;
+            if (binary && shifted != 0) {
                 LCD_drawPixel(ix+x, iy+y, color);
-            } else {
-                LCD_drawPixel(ix+x, iy+y, background);
             }
         }        
         
