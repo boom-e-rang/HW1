@@ -63,6 +63,12 @@ int main() {
   
   LCD_clearScreen(YELLOW);
   
+  _CP0_SET_COUNT(0);
+  while(_CP0_GET_COUNT()<20000000) {
+        ;
+    }
+    
+  
   int n=0;
   for (n=0; n<=100; n++) {
       
@@ -80,7 +86,19 @@ int main() {
     
     int ii=0;
     for (ii=0; ii<=n; ii++) {
-       LCD_drawPixel(28+ii, 52, BLACK);
+        if ((21+ii)<128) {
+            LCD_drawPixel(21+ii, 62, BLACK);
+        }
+    }
+    
+    float fps = 12000000/_CP0_GET_COUNT();
+    sprintf(message, "FPS = %5.2f", fps);
+    
+    i=0;
+    while(message[i]){
+      ASCII_value = message[i] - 0x20;
+      display_character(ASCII_value, BLACK, YELLOW, 33+6*i, 82);
+      i++;
     }
     
     while(_CP0_GET_COUNT()<2400000) {
@@ -88,7 +106,7 @@ int main() {
     }
     
   }
-    
+  
   while(1) {
       ;
   }
@@ -106,11 +124,17 @@ void display_character(char character, unsigned short color, unsigned short back
         binary = ASCII[character][ix];
  
         for (iy=0; iy<=7; iy++) {
-            if ((binary >> iy) & 1) {
-                LCD_drawPixel(ix+x, iy+y, color);
-            } else {
-                LCD_drawPixel(ix+x, iy+y, background);
+            
+            if (((ix+x)<128) & ((iy+y)<128)) {
+            
+                if ((binary >> iy) & 1) {
+                    LCD_drawPixel(ix+x, iy+y, color);
+                } else {
+                    LCD_drawPixel(ix+x, iy+y, background);
+                }
+            
             }
+            
         }        
         
     }
