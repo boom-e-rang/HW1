@@ -75,62 +75,40 @@ int main() {
     
   __builtin_enable_interrupts();
   
-    // clean screen
+    // clean screen and initialize variables
     LCD_clearScreen(GREEN);
-    unsigned char r = 0;
+    char message[15];
     int i=0;
     for (i=0;i<=13;i++) {
         array[i]=0;
     }
-    
-    // get WHO_AM_I to verify communication
-    i2c_master_start();                     // Begin the start sequence
-    i2c_master_send((SLAVE_ADDR << 1) | 0); // send the slave address, left shifted by 1,
-                                            // which clears bit 0, indicating a write
-    i2c_master_send(0x0F);                  // WHO_AM_I register
-    i2c_master_restart();                   // send a RESTART so we can begin reading
-    i2c_master_send((SLAVE_ADDR << 1) | 1); // send slave address, left shifted by 1,
-                                            // and then a 1 in lsb, indicating read
-    r = i2c_master_recv();              // receive a byte from the bus
-    i2c_master_ack(1);                      // send NACK (1):  master needs no more bytes
-    i2c_master_stop();
-    
-    char message[15];
-    sprintf(message, "WHO AM I = %d", r);
-  
-    i=0;
-    char ASCII_value;
-    while(message[i]){
-      ASCII_value = message[i] - 0x20;
-      display_character(ASCII_value, BLACK, GREEN, 23+6*i, 32);
-      i++;
-    }
-  
+
     // WHO AM I using functions
     read_all(array, 0x0F, 1);
-    sprintf(message, "%d", array[0]);
-    print_to_LCD(message, BLACK, GREEN, 23, 52);
+    sprintf(message, "WHO AM I = %d", array[0]);
+    print_to_LCD(message, BLACK, GREEN, 20, 32);
     
-    
+  int count=0;  
   while(1) {
     
     // set clock reading to 0  
     _CP0_SET_COUNT(0);  
-    /* 
-    read_all(array, 0x20, 14);
+ 
+    read_all(array, 0x0E, 3);
     
-    int temp = array[0] + (array[1] << 8);
+    int temp = (unsigned int) array[12] + (signed int) (array[13] << 8);
     sprintf(message, "Temperature = %d", temp);
-    print_to_LCD(message, BLACK, GREEN, 23, 42);
+    print_to_LCD(message, BLACK, GREEN, 20, 42);
     
-    sprintf(message, "%d %d", array[0], array[1]);
-    print_to_LCD(message, BLACK, GREEN, 23, 52);
-    */
+    sprintf(message, "%d %d", array[12], array[13]);
+    print_to_LCD(message, BLACK, GREEN, 20, 52);
+    
     // wait to create a 5Hz loop
     while(_CP0_GET_COUNT()<48000000/2/5) {
-        ;
+        sprintf(message, "%d", count);
+        print_to_LCD(message, BLACK, GREEN, 20, 82);
     } 
-   
+    count++;
   }
     
   return (0);
@@ -170,7 +148,7 @@ void read_all(unsigned char * array, int address, int number) {
         i2c_master_start();                     // Begin the start sequence
         i2c_master_send((SLAVE_ADDR << 1) | 0); // send the slave address, left shifted by 1,
                                                 // which clears bit 0, indicating a write
-        i2c_master_send(address + i);            
+        i2c_master_send(address+i);      
         i2c_master_restart();                   // send a RESTART so we can begin reading
         i2c_master_send((SLAVE_ADDR << 1) | 1); // send slave address, left shifted by 1,
                                                 // and then a 1 in lsb, indicating read
