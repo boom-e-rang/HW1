@@ -91,7 +91,7 @@ int main() {
         }
     }
     
-    float fps = 12000000/_CP0_GET_COUNT();
+    float fps = 24000000/_CP0_GET_COUNT();
     sprintf(message, "FPS = %5.2f", fps);
     
     i=0;
@@ -115,7 +115,7 @@ int main() {
 }
 
 
-void display_character(char character, unsigned short color, unsigned short background, int x, int y) {
+void display_character(char * character, unsigned short color, unsigned short background, int x, int y) {
     
     int ix, iy;
     char binary;

@@ -1,32 +1,12 @@
 
-#include "i2c_master_noint.h"
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <xc.h>  
-// Demonstrate I2C by having the I2C1 talk to a chip
-// Master will use SDA2 (pin6, RB2) and SCL2 (pin7, RB3).  Connect these through resistors to
-// Vcc (3.3 V) (2.4k resistors recommended, but around that should be good enough)
-
-// Two bytes will be written to the slave and then read back to the slave.
-
-// Wiring of the chip
-// SCL -> SCL2 + pull-up resistor
-// SDA -> SDA2 + pull-up resistor
-// A2 -> GND
-// A1 -> GND 
-// A0 -> GND
-// RESET -> 3.3V
-// ...
-// VSS - GND
-
-// VDD - capacitor, VDD
-// GP7 -> push button
-// ...
-// GP0 -> LED
+#include "i2c_master_noint.h"
+#include "ILI9163C.h"
 
 
-#define SLAVE_ADDR 0x20
+#define SLAVE_ADDR 0x6b
 
 // DEVCFG0
 #pragma config DEBUG = 11 // no debugging
@@ -63,12 +43,13 @@
 #pragma config FUSBIDIO = 1 // USB pins controlled by USB module
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
+void read_all(unsigned char * array, int address, int number);
+void print_to_LCD(char * message, unsigned short color, unsigned short background, int x, int y);
+void display_character(char character, unsigned short color, unsigned short background, int x, int y);
+
+unsigned char array[14];
 
 int main() {
-    
-  // some initialization function to set the right speed setting
-  char buf[100] = {};                       // buffer for sending messages to the user
-  
   
   __builtin_disable_interrupts();
   
@@ -84,58 +65,128 @@ int main() {
     // disable JTAG to get pins back
     DDPCONbits.JTAGEN = 0;
     
-    // turn off analog
+    // turn off analog (do I need this?)
     ANSELBbits.ANSB2 = 0;
     ANSELBbits.ANSB3 = 0;
     
     i2c_master_setup();                       // init I2C2, which we use as a master
+    SPI1_init();
+    LCD_init();
     
   __builtin_enable_interrupts();
   
-  
+    // clean screen
+    LCD_clearScreen(GREEN);
+    unsigned char r = 0;
+    int i=0;
+    for (i=0;i<=13;i++) {
+        array[i]=0;
+    }
+    
+    // get WHO_AM_I to verify communication
     i2c_master_start();                     // Begin the start sequence
     i2c_master_send((SLAVE_ADDR << 1) | 0); // send the slave address, left shifted by 1,
                                             // which clears bit 0, indicating a write
-    i2c_master_send(0x00);                  // IODIR register address is 0x00
-    i2c_master_send(0b11110000);            // set pins GP0-3 as outputs
-                                            // set pins GP4-7 as inputs
-    i2c_master_stop();
-    
-    i2c_master_start();                     
-    i2c_master_send((SLAVE_ADDR << 1) | 0); 
-    i2c_master_send(0x09);                  // GPIO register address is 0x00
-    i2c_master_send(0b00000000);            // set values to logic-low
-    i2c_master_stop();
-
-
-  while(1) {
-      
-    i2c_master_start();                     
-    i2c_master_send((SLAVE_ADDR << 1) | 0); 
-    i2c_master_send(0x09);                  // indicate register of pin to read (GPIO)
+    i2c_master_send(0x0F);                  // WHO_AM_I register
     i2c_master_restart();                   // send a RESTART so we can begin reading
     i2c_master_send((SLAVE_ADDR << 1) | 1); // send slave address, left shifted by 1,
                                             // and then a 1 in lsb, indicating read
-    char r = i2c_master_recv();             // receive a byte from the bus
+    r = i2c_master_recv();              // receive a byte from the bus
     i2c_master_ack(1);                      // send NACK (1):  master needs no more bytes
     i2c_master_stop();
     
-    char r_compare = 0b10000000;
-    if (r == r_compare) {
-        i2c_master_start();                     
-        i2c_master_send((SLAVE_ADDR << 1) | 0); 
-        i2c_master_send(0x09);                  // GPIO register address is 0x00
-        i2c_master_send(0b00000001);            // set values to logic-low
-        i2c_master_stop();
-    } else {
-        i2c_master_start();                     
-        i2c_master_send((SLAVE_ADDR << 1) | 0); 
-        i2c_master_send(0x09);                  // GPIO register address is 0x00
-        i2c_master_send(0b00000000);            // set values to logic-low
-        i2c_master_stop();
+    char message[15];
+    sprintf(message, "WHO AM I = %d", r);
+  
+    i=0;
+    char ASCII_value;
+    while(message[i]){
+      ASCII_value = message[i] - 0x20;
+      display_character(ASCII_value, BLACK, GREEN, 23+6*i, 32);
+      i++;
     }
+  
+    // WHO AM I using functions
+    read_all(array, 0x0F, 1);
+    sprintf(message, "%d", array[0]);
+    print_to_LCD(message, BLACK, GREEN, 23, 52);
     
+    
+  while(1) {
+    
+    // set clock reading to 0  
+    _CP0_SET_COUNT(0);  
+    /* 
+    read_all(array, 0x20, 14);
+    
+    int temp = array[0] + (array[1] << 8);
+    sprintf(message, "Temperature = %d", temp);
+    print_to_LCD(message, BLACK, GREEN, 23, 42);
+    
+    sprintf(message, "%d %d", array[0], array[1]);
+    print_to_LCD(message, BLACK, GREEN, 23, 52);
+    */
+    // wait to create a 5Hz loop
+    while(_CP0_GET_COUNT()<48000000/2/5) {
+        ;
+    } 
+   
   }
     
   return (0);
+}
+
+
+void display_character(char character, unsigned short color, unsigned short background, int x, int y) {
+    
+    int ix, iy;
+    char binary;
+    for (ix=0; ix<=4; ix++) {
+        
+        binary = ASCII[character][ix];
+ 
+        for (iy=0; iy<=7; iy++) {
+            
+            if (((ix+x)<128) & ((iy+y)<128)) {
+            
+                if ((binary >> iy) & 1) {
+                    LCD_drawPixel(ix+x, iy+y, color);
+                } else {
+                    LCD_drawPixel(ix+x, iy+y, background);
+                }
+            
+            }
+            
+        }        
+        
+    }
+}
+
+void read_all(unsigned char * array, int address, int number) {
+    
+    int i=0;
+    
+    for (i=0; i<=(number-1); i++) { 
+        i2c_master_start();                     // Begin the start sequence
+        i2c_master_send((SLAVE_ADDR << 1) | 0); // send the slave address, left shifted by 1,
+                                                // which clears bit 0, indicating a write
+        i2c_master_send(address + i);            
+        i2c_master_restart();                   // send a RESTART so we can begin reading
+        i2c_master_send((SLAVE_ADDR << 1) | 1); // send slave address, left shifted by 1,
+                                                // and then a 1 in lsb, indicating read
+        array[i] = i2c_master_recv();           // receive a byte from the bus
+        i2c_master_ack(1);                      // send NACK (1):  master needs no more bytes
+        i2c_master_stop();
+    }
+    
+}
+
+void print_to_LCD(char * message, unsigned short color, unsigned short background, int x, int y) {
+    int i=0;
+    char ASCII_value;
+    while(message[i]){
+      ASCII_value = message[i] - 0x20;
+      display_character(ASCII_value, color, background, x+6*i, y);
+      i++;
+    }
 }
