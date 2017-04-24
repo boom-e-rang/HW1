@@ -80,7 +80,7 @@ int main() {
     char message[15];
     int i=0;
     for (i=0;i<=13;i++) {
-        array[i]=0;
+        array[i]=1;
     }
 
     // WHO AM I using functions
@@ -94,9 +94,9 @@ int main() {
     // set clock reading to 0  
     _CP0_SET_COUNT(0);  
  
-    read_all(array, 0x0E, 3);
+    read_all(array, 0x20, 14);
     
-    int temp = (unsigned int) array[12] + (signed int) (array[13] << 8);
+    int temp = (unsigned int) array[0] + (signed int) (array[1] << 8);
     sprintf(message, "Temperature = %d", temp);
     print_to_LCD(message, BLACK, GREEN, 20, 42);
     
