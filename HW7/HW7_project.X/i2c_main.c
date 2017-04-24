@@ -94,14 +94,19 @@ int main() {
     // set clock reading to 0  
     _CP0_SET_COUNT(0);  
  
-    read_all(array, 0x20, 14);
+    read_all(array, 0x28, 6);
     
-    int temp = (unsigned int) array[0] + (signed int) (array[1] << 8);
-    sprintf(message, "Temperature = %d", temp);
+    int acc_x = (unsigned int) array[0] + (signed int) (array[1] << 8);
+    int acc_y = (unsigned int) array[2] + (signed int) (array[3] << 8);
+    int acc_z = (unsigned int) array[4] + (signed int) (array[5] << 8);
+    sprintf(message, "Acc in x = %d", acc_x);
     print_to_LCD(message, BLACK, GREEN, 20, 42);
-    
-    sprintf(message, "%d %d", array[12], array[13]);
+    sprintf(message, "Acc in y = %d", acc_y);
     print_to_LCD(message, BLACK, GREEN, 20, 52);
+    
+    sprintf(message, "%d %d", array[0], array[1]);
+    print_to_LCD(message, BLACK, GREEN, 20, 62);
+    
     
     // wait to create a 5Hz loop
     while(_CP0_GET_COUNT()<48000000/2/5) {
