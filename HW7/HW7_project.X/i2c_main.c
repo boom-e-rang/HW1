@@ -46,6 +46,8 @@
 void read_all(unsigned char * array, int address, int number);
 void print_to_LCD(char * message, unsigned short color, unsigned short background, int x, int y);
 void display_character(char character, unsigned short color, unsigned short background, int x, int y);
+void write_to_slave(int register_address, int number);
+int sign(int x);
 
 unsigned char array[14];
 
@@ -86,9 +88,12 @@ int main() {
     // WHO AM I using functions
     read_all(array, 0x0F, 1);
     sprintf(message, "WHO AM I = %d", array[0]);
-    print_to_LCD(message, BLACK, GREEN, 20, 32);
+    print_to_LCD(message, BLACK, GREEN, 20, 12);
     
-  int count=0;  
+    write_to_slave(0x10, 0b10000010);         // CTRL1_XL (sample rate 1.66 kHz, 2g sensitivity, and 100 Hz filter)
+    write_to_slave(0x11, 0b10001000);         // CTRL2_G (sample rate 1.66 kHz, 1000 dps sensitivity)
+    
+    
   while(1) {
     
     // set clock reading to 0  
@@ -96,24 +101,45 @@ int main() {
  
     read_all(array, 0x28, 6);
     
-    int acc_x = (unsigned int) array[0] + (signed int) (array[1] << 8);
-    int acc_y = (unsigned int) array[2] + (signed int) (array[3] << 8);
-    int acc_z = (unsigned int) array[4] + (signed int) (array[5] << 8);
-    sprintf(message, "Acc in x = %d", acc_x);
+    int acc_x = (unsigned short) array[0] + (signed short) (array[1] << 8);
+    int acc_y = (unsigned short) array[2] + (signed short) (array[3] << 8);
+    int acc_z = (unsigned short) array[4] + (signed short) (array[5] << 8);
+    /*
+    sprintf(message, "Acc in x = %d   ", acc_x);
     print_to_LCD(message, BLACK, GREEN, 20, 42);
-    sprintf(message, "Acc in y = %d", acc_y);
+    sprintf(message, "Acc in y = %d   ", acc_y);
     print_to_LCD(message, BLACK, GREEN, 20, 52);
-    
-    sprintf(message, "%d %d", array[0], array[1]);
+    sprintf(message, "Acc in z = %d   ", acc_z);
     print_to_LCD(message, BLACK, GREEN, 20, 62);
+     */
     
+    int x_scaled = (float) acc_x / 16383.5 * 50.0;
+    int y_scaled = (float) acc_y / 16383.5 * 50.0;
+    
+    sprintf(message, "Acc in x = %d   ", x_scaled);
+    print_to_LCD(message, BLACK, GREEN, 20, 22);
+    sprintf(message, "Acc in y = %d   ", y_scaled);
+    print_to_LCD(message, BLACK, GREEN, 20, 32);
+    
+    int ii=0;
+    for (ii=0;ii<=50;ii++) {
+        if (ii<=abs(x_scaled)) {
+            LCD_drawPixel(64-sign(x_scaled)*ii, 84, BLACK);
+        } else {
+            LCD_drawPixel(64-sign(x_scaled)*ii, 84, GREEN);
+        }
+        if (ii<=abs(y_scaled)) {
+            LCD_drawPixel(64, 84-sign(y_scaled)*ii, BLACK);
+        } else {
+            LCD_drawPixel(64, 84-sign(y_scaled)*ii, GREEN);
+        }
+    }
     
     // wait to create a 5Hz loop
     while(_CP0_GET_COUNT()<48000000/2/5) {
-        sprintf(message, "%d", count);
-        print_to_LCD(message, BLACK, GREEN, 20, 82);
+        ;
     } 
-    count++;
+
   }
     
   return (0);
@@ -171,5 +197,26 @@ void print_to_LCD(char * message, unsigned short color, unsigned short backgroun
       ASCII_value = message[i] - 0x20;
       display_character(ASCII_value, color, background, x+6*i, y);
       i++;
+    }
+}
+
+void write_to_slave(int register_address, int number) {
+    
+    i2c_master_start();                     // Begin the start sequence
+    i2c_master_send((SLAVE_ADDR << 1) | 0); // send the slave address, left shifted by 1,
+                                            // which clears bit 0, indicating a write
+    i2c_master_send(register_address);      
+    i2c_master_send(number); 
+    i2c_master_stop();
+    
+}
+
+int sign(int x) {
+    if (x > 0) {
+        return (1);
+    } else if (x < 0) {
+        return (-1);
+    } else {
+        return (0);
     }
 }
