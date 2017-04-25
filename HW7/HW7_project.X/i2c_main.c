@@ -125,13 +125,17 @@ int main() {
     for (ii=0;ii<=50;ii++) {
         if (ii<=abs(x_scaled)) {
             LCD_drawPixel(64-sign(x_scaled)*ii, 84, BLACK);
+            LCD_drawPixel(64+sign(x_scaled)*ii, 84, GREEN);
         } else {
             LCD_drawPixel(64-sign(x_scaled)*ii, 84, GREEN);
+            LCD_drawPixel(64+sign(x_scaled)*ii, 84, GREEN);
         }
         if (ii<=abs(y_scaled)) {
             LCD_drawPixel(64, 84-sign(y_scaled)*ii, BLACK);
+            LCD_drawPixel(64, 84+sign(y_scaled)*ii, GREEN);
         } else {
             LCD_drawPixel(64, 84-sign(y_scaled)*ii, GREEN);
+            LCD_drawPixel(64, 84+sign(y_scaled)*ii, GREEN);
         }
     }
     
