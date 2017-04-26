@@ -440,26 +440,20 @@ void APP_Tasks(void) {
             appData.isWriteComplete = false;
             appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
 
-            len = sprintf(dataOut, "%d\r\n", i);
-            i++;
-            if (appData.isReadComplete) {
+            // len = sprintf(dataOut, "%d\r\n", i);
+            // i++;
+            if (appData.isReadComplete && appData.readBuffer[0]=='r') {
                 
-                if (appData.readBuffer[0]=='r') {
-                    char message[50];
-                    int len2 = sprintf(message, "You just typed an r.\r\n");
-                    USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
-                            &appData.writeTransferHandle,
-                            message, len2,
-                            USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+                char message[50];
+                int len2 = sprintf(message, "You just typed an r.\r\n");
+                USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+                        &appData.writeTransferHandle,
+                        message, len2,
+                        USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
                     
-                } else {
-                    USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
-                            &appData.writeTransferHandle,
-                            appData.readBuffer, 1,
-                            USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
-                }
                 
             } else {
+                len = 1; dataOut[0] = 0;
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle, dataOut, len,
                         USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
