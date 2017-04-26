@@ -1,5 +1,8 @@
 #include <xc.h> 
 #include "helper.h"
+#include "i2c_master_noint.h"
+#include "ILI9163C.h"
+
 
 #define SLAVE_ADDR 0x6b
 
