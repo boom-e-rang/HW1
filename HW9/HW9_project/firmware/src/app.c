@@ -70,6 +70,9 @@ uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
 int startTime = 0;
+unsigned char array[12];
+int acc_gyr[6];
+char message[50];
 
 // *****************************************************************************
 /* Application Data
@@ -342,6 +345,35 @@ void APP_Initialize(void) {
 
     /* Set up the read buffer */
     appData.readBuffer = &readBuffer[0];
+    
+    __builtin_disable_interrupts();
+  
+        // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
+        __builtin_mtc0(_CP0_CONFIG, _CP0_CONFIG_SELECT, 0xa4210583);
+
+        // 0 data RAM access wait states
+        BMXCONbits.BMXWSDRM = 0x0;
+
+        // enable multi vector interrupts
+        INTCONbits.MVEC = 0x1;
+
+        // disable JTAG to get pins back
+        DDPCONbits.JTAGEN = 0;
+
+        // turn off analog (do I need this?)
+        ANSELBbits.ANSB2 = 0;
+        ANSELBbits.ANSB3 = 0;
+
+        i2c_master_setup();                       // init I2C2, which we use as a master
+        SPI1_init();
+        LCD_init();
+    
+    __builtin_enable_interrupts();
+    
+    LCD_clearScreen(BLACK);
+    
+    write_to_slave(0x10, 0b10000010);         // CTRL1_XL (sample rate 1.66 kHz, 2g sensitivity, and 100 Hz filter)
+    write_to_slave(0x11, 0b10001000);         // CTRL2_G (sample rate 1.66 kHz, 1000 dps sensitivity)
 
     startTime = _CP0_GET_COUNT();
 }
@@ -421,7 +453,7 @@ void APP_Tasks(void) {
             /* Check if a character was received or a switch was pressed.
              * The isReadComplete flag gets updated in the CDC event handler. */
 
-            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (48000000 / 2 / 5)) {
+            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (48000000 / 2 / 100)) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
             }
 
@@ -439,27 +471,41 @@ void APP_Tasks(void) {
             appData.writeTransferHandle = USB_DEVICE_CDC_TRANSFER_HANDLE_INVALID;
             appData.isWriteComplete = false;
             appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
+           
 
-            // len = sprintf(dataOut, "%d\r\n", i);
-            // i++;
             if (appData.isReadComplete && appData.readBuffer[0]=='r') {
-                
-                char message[50];
-                int len2 = sprintf(message, "You just typed an r.\r\n");
+
+                read_all(array, 0x22, 12);
+                convert(array, acc_gyr);
+                len = sprintf(message, "1 %d %d %d %d %d %d\r\n", acc_gyr[0], acc_gyr[1], acc_gyr[2], acc_gyr[3], acc_gyr[4], acc_gyr[5]);
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
-                        message, len2,
+                        message, len,
                         USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
-                    
+                i++;
+                                
+            } else if (i!=0) {
+                
+                read_all(array, 0x22, 12);
+                convert(array, acc_gyr);
+                len = sprintf(message, "%d %d %d %d %d %d %d\r\n", i+1, acc_gyr[0], acc_gyr[1], acc_gyr[2], acc_gyr[3], acc_gyr[4], acc_gyr[5]);
+                USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+                        &appData.writeTransferHandle,
+                        message, len,
+                        USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+                i++;
+                if (i==100) {
+                    i=0;
+                }
                 
             } else {
-                len = 1; dataOut[0] = 0;
+                len = 1; message[0] = 0;
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
-                        &appData.writeTransferHandle, dataOut, len,
+                        &appData.writeTransferHandle, message, len,
                         USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
-                startTime = _CP0_GET_COUNT();
             }
             
+            startTime = _CP0_GET_COUNT();
             break;
 
         case APP_STATE_WAIT_FOR_WRITE_COMPLETE:

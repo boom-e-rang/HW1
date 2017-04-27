@@ -80,3 +80,14 @@ int sign(int x) {
         return (0);
     }
 }
+
+void convert(unsigned char * array, int * acc_gyr) {
+    
+    acc_gyr[3] = (unsigned short) array[0] + (signed short) (array[1] << 8);
+    acc_gyr[4] = (unsigned short) array[2] + (signed short) (array[3] << 8);
+    acc_gyr[5] = (unsigned short) array[4] + (signed short) (array[5] << 8);
+    acc_gyr[0] = (unsigned short) array[6] + (signed short) (array[7] << 8);
+    acc_gyr[1] = (unsigned short) array[8] + (signed short) (array[9] << 8);
+    acc_gyr[2] = (unsigned short) array[10] + (signed short) (array[11] << 8);
+    
+}
