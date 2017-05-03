@@ -5,8 +5,8 @@
 #include "ILI9163C.h"
 
 #define MAX_LENGTH 10
-#define A 0.5
-#define B 0.5
+#define A 0.4
+#define B 0.6
 
 int q_index=0;
 int q[MAX_LENGTH];
