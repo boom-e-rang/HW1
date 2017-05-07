@@ -54,7 +54,12 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 
 #include "app.h"
-
+#include "IMU_helper.h"
+#include "mouse.h"
+#include "i2c_master_noint.h"
+#include <stdio.h>
+#include <xc.h>
+#include "ILI9163C.h"
 
 // *****************************************************************************
 // *****************************************************************************
@@ -82,6 +87,8 @@ APP_DATA appData;
 /* Mouse Report */
 MOUSE_REPORT mouseReport APP_MAKE_BUFFER_DMA_READY;
 MOUSE_REPORT mouseReportPrevious APP_MAKE_BUFFER_DMA_READY;
+unsigned char array[6];
+int acc_all[3];
 
 
 // *****************************************************************************
@@ -268,6 +275,37 @@ void APP_Initialize(void) {
     //appData.emulateMouse = true;
     appData.hidInstance = 0;
     appData.isMouseReportSendBusy = false;
+    
+    
+    __builtin_disable_interrupts();
+  
+        // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
+        __builtin_mtc0(_CP0_CONFIG, _CP0_CONFIG_SELECT, 0xa4210583);
+
+        // 0 data RAM access wait states
+        BMXCONbits.BMXWSDRM = 0x0;
+
+        // enable multi vector interrupts
+        INTCONbits.MVEC = 0x1;
+
+        // disable JTAG to get pins back
+        DDPCONbits.JTAGEN = 0;
+
+        // turn off analog (do I need this?)
+        ANSELBbits.ANSB2 = 0;
+        ANSELBbits.ANSB3 = 0;
+
+        i2c_master_setup();                       // init I2C2, which we use as a master
+        SPI1_init();
+        LCD_init();
+        
+    __builtin_enable_interrupts();
+    
+    LCD_clearScreen(BLACK);
+    
+    write_to_slave(0x10, 0b10000010);         // CTRL1_XL (sample rate 1.66 kHz, 2g sensitivity, and 100 Hz filter)
+    write_to_slave(0x11, 0b10001000);         // CTRL2_G (sample rate 1.66 kHz, 1000 dps sensitivity)
+    
 }
 
 /******************************************************************************
@@ -279,9 +317,8 @@ void APP_Initialize(void) {
  */
 
 void APP_Tasks(void) {
-    static int8_t vector = 0;
-    static uint8_t movement_length = 0;
-    int8_t dir_table[] = {-4, -4, -4, 0, 4, 4, 4, 0};
+
+static uint8_t inc = 0;
 
     /* Check the application's current state. */
     switch (appData.state) {
@@ -319,13 +356,29 @@ void APP_Tasks(void) {
         case APP_STATE_MOUSE_EMULATE:
             
             // every 50th loop, or 20 times per second
-            if (movement_length > 50) {
+            if (inc==10) {
+                read_all(array, 0x28, 6);
+                convert_acc(array, acc_all);
+                int move_x= ((float) acc_all[0]) / 16384.0 * 50.0;
+                int move_y= ((float) acc_all[1]) / 16384.0 * 50.0;
+                
+                char message[25];
+                sprintf(message, "Acc in x = %d   ", move_x);
+                print_to_LCD(message, BLACK, YELLOW, 20, 22);
+                sprintf(message, "Acc in y = %d   ", move_y);
+                print_to_LCD(message, BLACK, YELLOW, 20, 32);
+                
                 appData.mouseButton[0] = MOUSE_BUTTON_STATE_RELEASED;
                 appData.mouseButton[1] = MOUSE_BUTTON_STATE_RELEASED;
-                appData.xCoordinate = (int8_t) dir_table[vector & 0x07];
-                appData.yCoordinate = (int8_t) dir_table[(vector + 2) & 0x07];
-                vector++;
-                movement_length = 0;
+                appData.xCoordinate = (int8_t) move_x;
+                appData.yCoordinate = (int8_t) move_y;
+                inc=0;
+            } else {
+                appData.mouseButton[0] = MOUSE_BUTTON_STATE_RELEASED;
+                appData.mouseButton[1] = MOUSE_BUTTON_STATE_RELEASED;
+                appData.xCoordinate = (int8_t) 0;
+                appData.yCoordinate = (int8_t) 0;
+                inc++;
             }
 
             if (!appData.isMouseReportSendBusy) {
@@ -378,7 +431,7 @@ void APP_Tasks(void) {
                             sizeof (MOUSE_REPORT));
                     appData.setIdleTimer = 0;
                 }
-                movement_length++;
+             
             }
 
             break;
