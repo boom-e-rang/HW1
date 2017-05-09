@@ -4,9 +4,9 @@
 #include "i2c_master_noint.h"
 #include "ILI9163C.h"
 
-#define MAX_LENGTH 10
-#define A 0.4
-#define B 0.6
+#define MAX_LENGTH 15
+#define A 0.8
+#define B 0.2
 
 int q_index=0;
 int q[MAX_LENGTH];
