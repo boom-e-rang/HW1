@@ -5,7 +5,7 @@
 
 int MAF(int acc_z, int iteration);
 int IIR(int acc_z, int iteration);
-int FIR(int acc_z);
+int FIR(int acc_z, int iteration);
 
 
 #endif

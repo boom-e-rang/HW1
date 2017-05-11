@@ -478,7 +478,7 @@ void APP_Tasks(void) {
 
                 read_all(array, 0x2C, 2);
                 convert_justZ(array, acc_gyr);
-                len = sprintf(message, "1 %d %d %d %d\r\n", acc_gyr[0], MAF(acc_gyr[0],1), IIR(acc_gyr[0],1), FIR(acc_gyr[0]));
+                len = sprintf(message, "1 %d %d %d %d\r\n", acc_gyr[0], MAF(acc_gyr[0],1), IIR(acc_gyr[0],1), FIR(acc_gyr[0],1));
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
                         message, len,
@@ -489,7 +489,7 @@ void APP_Tasks(void) {
                 
                 read_all(array, 0x2C, 2);
                 convert_justZ(array, acc_gyr);
-                len = sprintf(message, "%d %d %d %d %d\r\n", i+1, acc_gyr[0], MAF(acc_gyr[0],i), IIR(acc_gyr[0],i), FIR(acc_gyr[0]));
+                len = sprintf(message, "%d %d %d %d %d\r\n", i+1, acc_gyr[0], MAF(acc_gyr[0],i), IIR(acc_gyr[0],i), FIR(acc_gyr[0],i));
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
                         message, len,
