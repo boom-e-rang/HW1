@@ -302,9 +302,9 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         // every time there is a new Camera preview frame
         mTextureView.getBitmap(bmp);
 
-        int thresh = 10;
+        int thresh = 20;
                 // myControl.getProgress() /2 ; // comparison value
-        int brightness = 20;
+        int brightness = 10;
                 // myControl2.getProgress(); // comparison value
         float COM = 0; // center of mass
 
@@ -320,7 +320,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                 int sum_m = 0; // the sum of the masses
                 // in the rows and columns, see if there is more green than red
                 for (int i = 0; i < bmp.getWidth(); i++) {
-                    if (((green(pixels[i]) - red(pixels[i])) > -thresh) && ((green(pixels[i]) - red(pixels[i])) < thresh) && (green(pixels[i]) > brightness)) {
+                    if (((blue(pixels[i]) - red(pixels[i])) > -thresh) && ((blue(pixels[i]) - red(pixels[i])) < thresh) && (blue(pixels[i]) > brightness)) {
                         // pixels[i] = rgb(0, 255, 0); // over write the pixel with pure green
 
                         sum_m = sum_m + green(pixels[i]) + red(pixels[i]) + blue(pixels[i]);

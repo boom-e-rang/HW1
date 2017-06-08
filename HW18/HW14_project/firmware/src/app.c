@@ -70,6 +70,7 @@ int rxVal = 0; // a place to store the int that was received
 double error;
 int left;
 int right;
+int count=0;
 
 // *****************************************************************************
 /* Application Data
@@ -498,7 +499,11 @@ void APP_Tasks(void) {
             if (gotRx) {
                 i++;
                 
-                // OC3RS = 6500; // should set the motor to 60 degrees (0.5ms to 2.5ms is 1500 to 7500 for 0 to 180 degrees)
+                /*count++;
+                if (count==50) {
+                    OC3RS = 6500; // should set the motor to 60 degrees (0.5ms to 2.5ms is 1500 to 7500 for 0 to 180 degrees)
+                    count=0;
+                }*/
                 
                 if (rxVal > 0 && rxVal < 481) {
                 // somewhere in APP_Tasks(), probably in case APP_STATE_SCHEDULE_READ
@@ -542,7 +547,12 @@ void APP_Tasks(void) {
                 
             } else {
                 
-                OC3RS = 4500;
+                /*if (count>30) {
+                    OC3RS = 6500; // should set the motor to 60 degrees (0.5ms to 2.5ms is 1500 to 7500 for 0 to 180 degrees)
+                    count=0;
+                } else {
+                    OC3RS = 4500;
+                }*/
                 
                 // len = sprintf(dataOut, "hi\r\n");
                 len=1; dataOut[0]=0;
